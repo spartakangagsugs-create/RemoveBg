@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Без фона</title>
+<style>
+:root{--bg:#0f1012;--panel:#1a1b1e;--card:#26282c;--line:#34373c;--ink:#eceef1;--mut:#9a9fa8;--blue:#1a7dff;--sel:#3b6fd8;--err:#ff8a7a;
+--font:"Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--font)}
+button,select,input{font:inherit;color:var(--ink)}
+button{cursor:pointer;border:0;background:none;border-radius:10px}
+button:disabled{opacity:.35;cursor:default}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+input[type=range]{accent-color:var(--blue);width:100%}
+.checker{background-color:#202226;background-image:linear-gradient(45deg,#17181b 25%,transparent 25%,transparent 75%,#17181b 75%),linear-gradient(45deg,#17181b 25%,transparent 25%,transparent 75%,#17181b 75%);background-size:20px 20px;background-position:0 0,10px 10px}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:r 1s linear infinite;margin:0 auto 10px}
+@keyframes r{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--blue)}
+/* заставка и старт */
+#boot,#home{max-width:600px;margin:0 auto;padding:56px 20px}
+#home{text-align:center}
+h1{font-size:1.7rem;letter-spacing:-.01em;margin:0 0 8px}.lead,.fine{color:var(--mut)}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;margin:14px 0}.row small{color:var(--mut)}.row .bar{grid-column:1/-1}.row.ok i{background:#2fbf71}
+.bar.wide{height:8px;margin-top:22px}#bootMsg{color:var(--mut);min-height:1.5em}#bootMsg.err,#note{color:var(--err)}
+.big{background:var(--blue);color:#fff;font-weight:600;font-size:1.2rem;padding:16px 40px;border-radius:12px}
+.zone{margin-top:24px;padding:40px 20px;border:2px dashed var(--line);border-radius:16px;background:var(--panel)}
+body.drag .zone{border-color:var(--blue)}.zone p{margin:14px 0 0;color:var(--mut)}.zone a{text-decoration:underline;cursor:pointer}
+#urlForm{display:flex;gap:8px;max-width:440px;margin:14px auto 0}#urlForm input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.opts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:24px;color:var(--mut)}.opts label{display:flex;gap:8px;align-items:center}
+/* редактор */
+#app{height:100vh;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.top{display:flex;align-items:center;gap:6px;padding:12px 24px}.top .sp{flex:1}
+.tab,.ib{display:inline-flex;gap:8px;align-items:center;padding:9px 16px;color:var(--mut);border-radius:12px}
+.ib{padding:9px}.tab:hover,.ib:hover:not(:disabled){color:var(--ink)}.tab.on,.ib.on{background:var(--card);color:var(--ink)}
+.dl{background:var(--blue);color:#fff;font-weight:600;padding:10px 20px;border-radius:14px;display:inline-flex;gap:8px;align-items:center}
+.dlw{position:relative}.menu{position:absolute;right:0;top:calc(100% + 10px);width:330px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;z-index:9}
+.menu button{display:flex;width:100%;gap:12px;align-items:center;padding:12px;text-align:left;border-radius:10px}.menu button:hover{background:var(--card)}
+.menu small{margin-left:auto;background:var(--card);border-radius:8px;padding:3px 10px;color:var(--mut)}
+.main{display:flex;gap:24px;min-height:0;padding:0 24px}
+.stage{position:relative;flex:1;min-width:0;display:flex;overflow:auto;border-radius:18px;background:#0b0c0d}
+.frame{position:relative;margin:auto;flex:none}.frame canvas{display:block;width:100%;height:100%}
+.zoom{position:absolute;right:12px;top:12px;z-index:3;background:#0009;color:#fff}
+.state{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;padding:20px;background:#0f1012cc;color:var(--mut)}.state.err{color:var(--err)}
+#brush{position:fixed;z-index:8;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #fff;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #000}
+.panel{width:310px;flex:none;overflow:auto;padding:4px 0 16px}
+.panel h3{margin:18px 0 8px;font-size:.95rem;font-weight:600;color:var(--mut)}
+.promo{background:var(--card);border-radius:12px;padding:14px 16px}.promo b{display:block;color:var(--mut);font-size:.8rem;font-weight:500}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.tool{display:grid;gap:6px;justify-items:center;padding:16px 8px;border:2px solid var(--line);background:var(--card);color:var(--mut);border-radius:12px;font-weight:600}
+.tool.on{border-color:var(--sel);color:#7fa6ff}.tool svg{width:30px;height:30px}
+.line{display:flex;align-items:center;gap:14px;margin:10px 0;color:var(--mut)}.line span{flex:none;min-width:88px}
+.sw{appearance:none;width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.sw:checked{background:var(--blue)}.sw:checked::after{left:21px}
+.sws{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.sws button{aspect-ratio:1;border:2px solid var(--line);border-radius:10px}.sws button.on{border-color:var(--sel)}
+.btn{width:100%;background:var(--card);padding:11px;font-weight:600;margin-top:8px}
+.strip{display:flex;gap:10px;justify-content:center;align-items:center;padding:14px}
+.th{width:54px;height:54px;padding:0;border:2px solid transparent;overflow:hidden;background:var(--card)}.th.on{border-color:var(--sel)}.th img{width:100%;height:100%;object-fit:cover;display:block}
+#add{width:44px;height:44px;color:var(--mut);display:grid;place-items:center}
+@media (max-width:860px){.main{flex-direction:column;overflow:auto}.stage{min-height:52vh;flex:none}.panel{width:auto}}
+.langsel{position:fixed;left:16px;bottom:16px;z-index:20;width:auto;padding:6px 10px;font-size:.85rem;opacity:.85}
+</style>
+</head>
+<body>
+<section id="boot">
+  <h1>Подготовка к работе</h1><p id="bootSrc" class="lead">Проверяю файлы…</p>
+  <div id="bootRows"></div><div class="bar wide"><i id="bootAll" style="width:0"></i></div>
+  <p id="bootMsg"></p><button id="bootRetry" class="big" hidden>Повторить</button>
+</section>
+
+<section id="home" hidden>
+  <h1>Загрузите изображение, чтобы удалить фон</h1>
+  <p class="lead">Автоматически, без регистрации. Файлы не покидают ваш компьютер.</p>
+  <div class="zone">
+    <button id="pick" class="big">Загрузить изображение</button>
+    <p>или перетащите файл, вставьте изображение (Ctrl+V) или <a id="urlLink" role="button" tabindex="0">укажите ссылку</a></p>
+    <form id="urlForm" hidden><input id="url" type="url" placeholder="https://…/photo.jpg" aria-label="Ссылка"><button class="big" style="padding:8px 18px;font-size:1rem">Открыть</button></form>
+  </div>
+  <p id="note" role="alert"></p>
+  <div class="opts">
+    <label>Модель <select class="model"><option value="isnet_quint8">Быстрая (≈45 МБ)</option><option value="isnet_fp16" selected>Сбалансированная (≈90 МБ)</option><option value="isnet">Лучшее качество (≈175 МБ)</option></select></label>
+    <label>Считать на <select class="device"><option value="cpu">Процессоре</option><option value="gpu">Видеокарте (WebGPU)</option></select></label>
+  </div>
+</section>
+
+<input id="file" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+<input id="bgfile" type="file" accept="image/*" hidden>
+
+<div id="app" hidden>
+  <div class="top">
+    <button class="tab on" data-tab="cutout" data-i="cut">Вырезка</button>
+    <button class="tab" data-tab="bg" data-i="img">Фон</button>
+    <button class="tab" data-tab="fx" data-i="fx">Эффекты</button>
+    <button class="tab" data-tab="adj" data-i="adj">Настройки</button>
+    <span class="sp"></span>
+    <button id="cmp" class="ib" data-i="cmp" title="Сравнить с оригиналом" aria-label="Сравнить с оригиналом"></button>
+    <button id="undo" class="ib" data-i="undo" title="Отменить" aria-label="Отменить" disabled></button>
+    <button id="redo" class="ib" data-i="redo" title="Вернуть действие" aria-label="Вернуть действие" disabled></button>
+    <div class="dlw">
+      <button id="dl" class="dl" disabled>Скачать <span data-i="chev"></span></button>
+      <div id="menu" class="menu" hidden>
+        <button data-p="1"><span data-i="eye"></span>Предпросмотр <span id="mP"></span><small>до 500 px</small></button>
+        <button data-p="0"><span data-i="bolt"></span>Максимум <span id="mM"></span><small>оригинал</small></button>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div id="stage" class="stage">
+      <button id="zoom" class="ib zoom" data-i="zoom" title="Масштаб 100%" aria-label="Масштаб"></button>
+      <div id="frame" class="frame checker"><canvas id="V"></canvas></div>
+      <div id="state" class="state" hidden></div>
+    </div>
+    <aside class="panel">
+      <div data-pane="cutout">
+        <div class="promo"><b>Магическая кисть</b>Стирайте и восстанавливайте детали одним движением</div>
+        <div class="two">
+          <button class="tool on" data-tool="erase"><span data-i="minus"></span>Стереть</button>
+          <button class="tool" data-tool="restore"><span data-i="plus"></span>Вернуть</button>
+        </div>
+        <div class="line"><span>Размер кисти</span><input id="size" type="range" min="8" max="160" value="40" aria-label="Размер кисти"></div>
+        <div class="line"><input id="magic" class="sw" type="checkbox" checked aria-label="Магическая кисть"><label for="magic">Магическая кисть</label></div>
+        <h3>Модель</h3>
+        <select class="model"><option value="isnet_quint8">Быстрая (≈45 МБ)</option><option value="isnet_fp16" selected>Сбалансированная (≈90 МБ)</option><option value="isnet">Лучшее качество (≈175 МБ)</option></select>
+        <h3>Считать на</h3>
+        <select class="device"><option value="cpu">Процессоре</option><option value="gpu">Видеокарте (WebGPU)</option></select>
+        <button id="redo2" class="btn">Обработать заново этой моделью</button>
+      </div>
+      <div data-pane="bg" hidden>
+        <h3>Цвет фона</h3><div id="sws" class="sws"></div>
+        <div class="line"><span>Свой цвет</span><input id="custom" type="color" value="#3b82f6"></div>
+        <button id="blurbg" class="btn">Размытый оригинал</button>
+        <button id="imgbg" class="btn">Своё фото…</button>
+      </div>
+      <div data-pane="fx" hidden>
+        <div class="line"><input id="shOn" class="sw" type="checkbox" aria-label="Тень"><label for="shOn">Тень</label></div>
+        <div class="line"><span>Размытие</span><input id="shB" type="range" min="0" max="100" value="30"></div>
+        <div class="line"><span>Прозрачность</span><input id="shO" type="range" min="0" max="100" value="45"></div>
+      </div>
+      <div data-pane="adj" hidden>
+        <div class="line"><span>Яркость</span><input id="aB" type="range" min="50" max="150" value="100"></div>
+        <div class="line"><span>Контраст</span><input id="aC" type="range" min="50" max="150" value="100"></div>
+        <div class="line"><span>Насыщенность</span><input id="aS" type="range" min="0" max="200" value="100"></div>
+        <button id="aR" class="btn">Сбросить</button>
+      </div>
+    </aside>
+  </div>
+  <div id="strip" class="strip"></div>
+</div>
+<select id="lang" class="langsel" aria-label="Language"></select>
+<div id="brush" hidden></div>
+
+<script>
+let lib = null;
+
+// ================= Локализация =================
+const TR = {"en": {"Без фона": "No Background", "Подготовка к работе": "Getting ready", "Проверяю файлы…": "Checking files…", "Повторить": "Retry", "Загрузите изображение, чтобы удалить фон": "Upload an image to remove the background", "Автоматически, без регистрации. Файлы не покидают ваш компьютер.": "Automatic, no sign-up. Your files never leave your computer.", "Загрузить изображение": "Upload image", "или перетащите файл, вставьте изображение (Ctrl+V) или": "or drop a file, paste an image (Ctrl+V) or", "укажите ссылку": "enter a URL", "Ссылка": "Link", "Открыть": "Open", "Модель": "Model", "Быстрая (≈45 МБ)": "Fast (≈45 MB)", "Сбалансированная (≈90 МБ)": "Balanced (≈90 MB)", "Лучшее качество (≈175 МБ)": "Best quality (≈175 MB)", "Считать на": "Run on", "Процессоре": "CPU", "Видеокарте (WebGPU)": "GPU (WebGPU)", "Вырезка": "Cutout", "Фон": "Background", "Эффекты": "Effects", "Настройки": "Adjust", "Сравнить с оригиналом": "Compare with original", "Отменить": "Undo", "Вернуть действие": "Redo", "Скачать": "Download", "Предпросмотр": "Preview", "до 500 px": "up to 500 px", "Максимум": "Maximum", "оригинал": "original", "Масштаб 100%": "Zoom 100%", "Масштаб": "Zoom", "Магическая кисть": "Magic Brush", "Стирайте и восстанавливайте детали одним движением": "Erase or restore details in one stroke", "Стереть": "Erase", "Вернуть": "Restore", "Размер кисти": "Brush size", "Обработать заново этой моделью": "Process again with this model", "Цвет фона": "Background color", "Свой цвет": "Custom color", "Размытый оригинал": "Blurred original", "Своё фото…": "Your own photo…", "Прозрачный": "Transparent", "Тень": "Shadow", "Размытие": "Blur", "Прозрачность": "Opacity", "Яркость": "Brightness", "Контраст": "Contrast", "Насыщенность": "Saturation", "Сбросить": "Reset", "Добавить изображение": "Add image", "Изображение": "Image", "Оригинал": "Original", "В очереди…": "Queued…", "Готовлю нейросеть…": "Preparing the model…", "Удаляю фон…": "Removing background…", "Убрать это изображение": "Remove this image", "Не удалось обработать изображение. ": "Could not process the image. ", "Нужен файл JPG, PNG или WebP.": "A JPG, PNG or WebP file is required.", "Не удалось открыть ссылку: сайт может запрещать загрузку. Скачайте файл и загрузите его.": "Could not open the link: the site may block downloads. Save the file and upload it instead.", "Файлы берутся из папки models/ рядом со страницей. Интернет не нужен.": "Files are loaded from the models/ folder next to this page. No internet needed.", "Файлы скачиваются один раз и сохраняются в браузере. Нужен интернет.": "Files are downloaded once and stored in your browser. Internet required.", "Проверяю список файлов…": "Checking the file list…", "Не найден список файлов (resources.json).": "File list (resources.json) not found.", "Загружаю библиотеку…": "Loading the library…", "Не удалось загрузить библиотеку. Проверьте интернет или запустите run.py.": "Could not load the library. Check your internet connection or run run.py.", "Ядро вычислений": "Compute engine", "Модель «Быстрая»": "Model: Fast", "Модель «Сбалансированная»": "Model: Balanced", "Модель «Лучшее качество»": "Model: Best quality", "Загружаю:": "Loading:", "Не удалось получить файл": "Could not fetch file", "Ошибка: ": "Error: ", "МБ": "MB"}, "hy": {"Без фона": "Առանց ֆոնի", "Подготовка к работе": "Նախապատրաստում", "Проверяю файлы…": "Ստուգում եմ ֆայլերը…", "Повторить": "Կրկնել", "Загрузите изображение, чтобы удалить фон": "Վերբեռնեք պատկեր՝ ֆոնը հեռացնելու համար", "Автоматически, без регистрации. Файлы не покидают ваш компьютер.": "Ավտոմատ, առանց գրանցման։ Ֆայլերը չեն լքում ձեր համակարգիչը։", "Загрузить изображение": "Վերբեռնել պատկեր", "или перетащите файл, вставьте изображение (Ctrl+V) или": "կամ քաշեք ֆայլը, տեղադրեք պատկեր (Ctrl+V) կամ", "укажите ссылку": "նշեք հղում", "Ссылка": "Հղում", "Открыть": "Բացել", "Модель": "Մոդել", "Быстрая (≈45 МБ)": "Արագ (≈45 ՄԲ)", "Сбалансированная (≈90 МБ)": "Հավասարակշռված (≈90 ՄԲ)", "Лучшее качество (≈175 МБ)": "Լավագույն որակ (≈175 ՄԲ)", "Считать на": "Կատարել", "Процессоре": "Պրոցեսորով", "Видеокарте (WebGPU)": "Վիդեոքարտով (WebGPU)", "Вырезка": "Կտրում", "Фон": "Ֆոն", "Эффекты": "Էֆեկտներ", "Настройки": "Կարգավորումներ", "Сравнить с оригиналом": "Համեմատել բնօրինակի հետ", "Отменить": "Հետարկել", "Вернуть действие": "Վերադարձնել", "Скачать": "Ներբեռնել", "Предпросмотр": "Նախադիտում", "до 500 px": "մինչև 500 px", "Максимум": "Առավելագույն", "оригинал": "բնօրինակ", "Масштаб 100%": "Մասշտաբ 100%", "Масштаб": "Մասշտաբ", "Магическая кисть": "Կախարդական վրձին", "Стирайте и восстанавливайте детали одним движением": "Ջնջեք կամ վերականգնեք մանրամասները մեկ շարժումով", "Стереть": "Ջնջել", "Вернуть": "Վերականգնել", "Размер кисти": "Վրձնի չափը", "Обработать заново этой моделью": "Նորից մշակել այս մոդելով", "Цвет фона": "Ֆոնի գույնը", "Свой цвет": "Սեփական գույն", "Размытый оригинал": "Լղոզված բնօրինակ", "Своё фото…": "Ձեր լուսանկարը…", "Прозрачный": "Թափանցիկ", "Тень": "Ստվեր", "Размытие": "Լղոզում", "Прозрачность": "Թափանցիկություն", "Яркость": "Պայծառություն", "Контраст": "Կոնտրաստ", "Насыщенность": "Հագեցվածություն", "Сбросить": "Զրոյացնել", "Добавить изображение": "Ավելացնել պատկեր", "Изображение": "Պատկեր", "Оригинал": "Բնօրինակ", "В очереди…": "Հերթում…", "Готовлю нейросеть…": "Պատրաստում եմ նեյրոցանցը…", "Удаляю фон…": "Հեռացնում եմ ֆոնը…", "Убрать это изображение": "Հեռացնել այս պատկերը", "Не удалось обработать изображение. ": "Չհաջողվեց մշակել պատկերը։ ", "Нужен файл JPG, PNG или WebP.": "Պահանջվում է JPG, PNG կամ WebP ֆայլ։", "Не удалось открыть ссылку: сайт может запрещать загрузку. Скачайте файл и загрузите его.": "Չհաջողվեց բացել հղումը․ կայքը կարող է արգելել ներբեռնումը։ Ներբեռնեք ֆայլը և վերբեռնեք այն։", "Файлы берутся из папки models/ рядом со страницей. Интернет не нужен.": "Ֆայլերը վերցվում են էջի կողքի models/ պանակից։ Ինտերնետ պետք չէ։", "Файлы скачиваются один раз и сохраняются в браузере. Нужен интернет.": "Ֆայլերը ներբեռնվում են մեկ անգամ և պահվում բրաուզերում։ Ինտերնետ է պետք։", "Проверяю список файлов…": "Ստուգում եմ ֆայլերի ցանկը…", "Не найден список файлов (resources.json).": "Ֆայլերի ցանկը (resources.json) չի գտնվել։", "Загружаю библиотеку…": "Բեռնում եմ գրադարանը…", "Не удалось загрузить библиотеку. Проверьте интернет или запустите run.py.": "Չհաջողվեց բեռնել գրադարանը։ Ստուգեք ինտերնետը կամ գործարկեք run.py-ը։", "Ядро вычислений": "Հաշվարկային միջուկ", "Модель «Быстрая»": "Մոդել՝ Արագ", "Модель «Сбалансированная»": "Մոդել՝ Հավասարակշռված", "Модель «Лучшее качество»": "Մոդել՝ Լավագույն որակ", "Загружаю:": "Բեռնում եմ՝", "Не удалось получить файл": "Չհաջողվեց ստանալ ֆայլը", "Ошибка: ": "Սխալ՝ ", "МБ": "ՄԲ"}};
+const LANGS = { ru: 'Русский', en: 'English', hy: 'Հայերեն' };
+let LANG = 'en';
+try{ LANG = localStorage.getItem('lang') || (navigator.language || 'en').slice(0, 2); }catch{}
+if (!LANGS[LANG]) LANG = 'en';
+const t = k => (TR[LANG] && TR[LANG][k]) || k;
+function applyLang(){
+  document.documentElement.lang = LANG; document.title = t('Без фона');
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; n = w.nextNode();){
+    if (/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName)) continue;
+    const src = (n.__ru = n.__ru ?? n.nodeValue), k = src.trim(); if (!k) continue;
+    n.nodeValue = src.replace(k, () => t(k));
+  }
+  document.querySelectorAll('[title],[aria-label],[placeholder]').forEach(e => ['title', 'aria-label', 'placeholder'].forEach(a => {
+    if (!e.hasAttribute(a)) return; e.__a = e.__a || {}; const v = (e.__a[a] = e.__a[a] ?? e.getAttribute(a)); e.setAttribute(a, t(v));
+  }));
+}
+const langSel = document.getElementById('lang');
+langSel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v}</option>`).join(''); langSel.value = LANG;
+langSel.onchange = () => { LANG = langSel.value; try{ localStorage.setItem('lang', LANG); }catch{} applyLang(); if (cur){ overlay(); strip(); render(); } };
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const I = { cut:'M4 20l9-9M13 11l3-3 4 4-3 3z', img:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6', fx:'M12 3a9 9 0 100 18 9 9 0 000-18zM8 9a5 5 0 014-3',
+  adj:'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M8 15v4', cmp:'M12 3v18M3 6h6v12H3zM15 6h6v12h-6z', undo:'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
+  redo:'M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3', minus:'M12 3a9 9 0 100 18 9 9 0 000-18zM8 12h8', plus:'M12 3a9 9 0 100 18 9 9 0 000-18zM8 12h8M12 8v8',
+  zoom:'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-5-5M11 8v6M8 11h6', chev:'M6 9l6 6 6-6', eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6z', bolt:'M13 2L4 14h7l-1 8 9-12h-7z', add:'M12 5v14M5 12h14' };
+$$('[data-i]').forEach(e => e.insertAdjacentHTML('afterbegin',
+  `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${I[e.dataset.i]}"/></svg>`));
+
+const V = $('#V'), frame = $('#frame'), stage = $('#stage'), br = $('#brush'), home = $('#home');
+const COLORS = [null,'#ffffff','#000000','#f5b700','#e5484d','#2b6cff','#2fbf71','#8a94a3','#ff7ab8','#7c4dff'];
+let items = [], cur = null, tab = 'cutout', tool = 'erase', cmp = false, split = .5, zoom = false, busy = false, last = null, seed = [0,0,0], drag = false, raf = 0;
+let bg = { type: 'none', v: null, img: null }, fx = { on: false, blur: 30, op: 45 }, adj = { b: 100, c: 100, s: 100 };
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+// ---------- отрисовка ----------
+function draw(x, W, H, c){
+  x.clearRect(0, 0, W, H);
+  if (bg.type === 'color'){ x.fillStyle = bg.v; x.fillRect(0, 0, W, H); }
+  else if (bg.type === 'blur'){ x.save(); x.filter = `blur(${W / 40}px)`; x.drawImage(c.oc, -W * .05, -H * .05, W * 1.1, H * 1.1); x.restore(); }
+  else if (bg.type === 'image' && bg.img){ const r = Math.max(W / bg.img.width, H / bg.img.height), w = bg.img.width * r, h = bg.img.height * r; x.drawImage(bg.img, (W - w) / 2, (H - h) / 2, w, h); }
+  x.save();
+  if (adj.b !== 100 || adj.c !== 100 || adj.s !== 100) x.filter = `brightness(${adj.b}%) contrast(${adj.c}%) saturate(${adj.s}%)`;
+  if (fx.on){ x.shadowColor = `rgba(0,0,0,${fx.op / 100})`; x.shadowBlur = fx.blur * W / 700; x.shadowOffsetY = fx.blur * W / 1400; }
+  x.drawImage(c.cc, 0, 0, W, H); x.restore();
+}
+function render(){
+  if (!cur || !cur.cc) return;
+  const W = V.width, H = V.height, x = V.getContext('2d');
+  draw(x, W, H, cur);
+  if (cmp){
+    const sx = W * split;
+    x.save(); x.beginPath(); x.rect(0, 0, sx, H); x.clip(); x.clearRect(0, 0, W, H); x.drawImage(cur.oc, 0, 0, W, H); x.restore();
+    x.fillStyle = '#fff'; x.fillRect(sx - 1.5, 0, 3, H); x.beginPath(); x.arc(sx, H / 2, Math.max(14, W / 50), 0, 7); x.fill();
+    x.shadowColor = '#000'; x.shadowBlur = 6; x.textBaseline = 'top'; x.font = `600 ${Math.max(13, W / 45)}px system-ui`;
+    if (sx > W * .15){ x.textAlign = 'left'; x.fillText(t('Оригинал'), 12, 12); }
+    if (sx < W * .85){ x.textAlign = 'right'; x.fillText(t('Без фона'), W - 12, 12); }
+  }
+}
+const req = () => raf || (raf = requestAnimationFrame(() => { raf = 0; render(); }));
+function fit(){
+  if (!cur || !cur.cc) return;
+  const iw = cur.cc.width, ih = cur.cc.height, sw = stage.clientWidth - 24, sh = stage.clientHeight - 24;
+  const k = zoom ? 1 : Math.min(sw / iw, sh / ih, 2);
+  frame.style.width = Math.round(iw * k) + 'px'; frame.style.height = Math.round(ih * k) + 'px';
+  const d = Math.min(devicePixelRatio || 1, iw / (iw * k)), w = Math.max(1, Math.min(iw, Math.round(iw * k * (devicePixelRatio || 1))));
+  V.width = w; V.height = Math.max(1, Math.round(w * ih / iw));
+  render();
+}
+frame.classList.add('checker');
+function paintFrame(){ frame.classList.toggle('checker', bg.type === 'none'); render(); }
+
+// ---------- сравнение с анимацией ----------
+function anim(a, b, ms, done){
+  const t0 = performance.now();
+  (function f(t){
+    const k = Math.min(1, (t - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    split = a + (b - a) * e; render();
+    k < 1 ? requestAnimationFrame(f) : done && done();
+  })(t0);
+}
+function reveal(){ cmp = true; $('#cmp').classList.add('on'); anim(1, 0, 1700, () => { cmp = false; $('#cmp').classList.remove('on'); render(); }); }
+$('#cmp').onclick = () => {
+  if (!cur || !cur.ready) return;
+  if (!cmp){ cmp = true; $('#cmp').classList.add('on'); anim(1, .5, 700); }
+  else anim(split, 0, 400, () => { cmp = false; $('#cmp').classList.remove('on'); render(); });
+};
+
+// ---------- изображения и обработка ----------
+function addFiles(files){
+  const fresh = [...files].filter(f => f && f.type.startsWith('image/')).map(f => ({ name: f.name.replace(/\.[^.]+$/, '') || 'image', src: f, thumb: URL.createObjectURL(f), undo: [], redo: [], status: 'В очереди…' }));
+  if (!fresh.length){ $('#note').textContent = t('Нужен файл JPG, PNG или WebP.'); return; }
+  items.push(...fresh); home.hidden = true; $('#app').hidden = false;
+  select(fresh[0]); pump();
+}
+async function pump(){
+  if (busy) return; busy = true;
+  for (const it of items) if (!it.ready && !it.err) await proc(it);
+  busy = false;
+}
+async function proc(it){
+  it.status = 'Готовлю нейросеть…'; overlay();
+  try{
+    const bmp = await createImageBitmap(it.src);
+    it.oc = mk(bmp.width, bmp.height); it.ox = it.oc.getContext('2d'); it.ox.drawImage(bmp, 0, 0);
+    it.cc = mk(bmp.width, bmp.height); it.cx = it.cc.getContext('2d'); it.cx.drawImage(bmp, 0, 0);
+    if (it === cur) fit();
+    const out = await lib.removeBackground(it.src, { model: $('.model').value, device: $('.device').value, publicPath: base, output: { format: 'image/png' },
+      progress: (k, c, t) => { it.status = k.startsWith('compute') ? 'Удаляю фон…' : 'Готовлю нейросеть…'; if (it === cur) overlay(); } });
+    const rb = await createImageBitmap(out);
+    it.cc = mk(rb.width, rb.height); it.cx = it.cc.getContext('2d'); it.cx.drawImage(rb, 0, 0);
+    if (it.oc.width !== rb.width){ it.oc = mk(rb.width, rb.height); it.ox = it.oc.getContext('2d'); it.ox.drawImage(bmp, 0, 0, rb.width, rb.height); }
+    it.ready = true; it.undo = []; it.redo = [];
+  }catch(e){ console.error(e); it.err = e.message || String(e); }
+  strip(); if (it === cur){ overlay(); fit(); buttons(); if (it.ready) reveal(); }
+}
+function overlay(){
+  const s = $('#state'); if (!cur || cur.ready){ s.hidden = true; return; }
+  s.hidden = false; s.className = 'state' + (cur.err ? ' err' : '');
+  s.innerHTML = cur.err ? '<div><p></p><button class="btn" id="drop">Убрать это изображение</button></div>' : `<div><div class="spin"></div>${cur.status}</div>`;
+  if (cur.err){ s.querySelector('p').textContent = t('Не удалось обработать изображение. ') + cur.err; $('#drop').onclick = () => remove(cur); }
+  applyLang();
+}
+function remove(it){
+  items = items.filter(x => x !== it);
+  if (!items.length){ cur = null; $('#app').hidden = true; home.hidden = false; return; }
+  select(items[0]);
+}
+function select(it){ cur = it; overlay(); strip(); buttons(); if (it.cc) fit(); }
+function strip(){
+  $('#strip').innerHTML = '<button id="add" title="Добавить изображение" aria-label="Добавить изображение" data-i="add"></button>' +
+    items.map((it, i) => `<button class="th${it === cur ? ' on' : ''}" data-k="${i}" aria-label="Изображение ${i + 1}"><img src="${it.thumb}" alt=""></button>`).join('');
+  $('#add').insertAdjacentHTML('afterbegin', `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="${I.add}"/></svg>`);
+  $('#add').onclick = () => $('#file').click();
+  $$('.th').forEach(b => b.onclick = () => select(items[b.dataset.k]));
+  applyLang();
+}
+function buttons(){
+  $('#undo').disabled = !(cur && cur.undo.length); $('#redo').disabled = !(cur && cur.redo.length); $('#dl').disabled = !(cur && cur.ready);
+}
+
+// ---------- ввод файлов ----------
+$('#pick').onclick = () => $('#file').click();
+$('#file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+const tg = () => { $('#urlForm').hidden = !$('#urlForm').hidden; $('#url').focus(); };
+$('#urlLink').onclick = tg; $('#urlLink').onkeydown = e => e.key === 'Enter' && tg();
+async function fromUrl(u){
+  try{ const r = await fetch(u); if (!r.ok) throw 0; const b = await r.blob(); if (!b.type.startsWith('image/')) throw 0; addFiles([new File([b], u.split('/').pop().split('?')[0] || 'image', { type: b.type })]); }
+  catch{ $('#note').textContent = t('Не удалось открыть ссылку: сайт может запрещать загрузку. Скачайте файл и загрузите его.'); }
+}
+$('#urlForm').onsubmit = e => { e.preventDefault(); if ($('#url').value) fromUrl($('#url').value.trim()); };
+addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drag'); });
+addEventListener('dragleave', () => document.body.classList.remove('drag'));
+addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('drag'); addFiles(e.dataTransfer.files); });
+addEventListener('paste', e => { if (e.clipboardData.files.length) addFiles(e.clipboardData.files); else { const t = e.clipboardData.getData('text').trim(); if (/^https?:\/\//.test(t)) fromUrl(t); } });
+['model', 'device'].forEach(k => $$('.' + k).forEach(s => s.onchange = () => $$('.' + k).forEach(o => o.value = s.value)));
+$('#redo2').onclick = () => { if (!cur) return; cur.ready = false; cur.err = null; cur.status = 'В очереди…'; overlay(); buttons(); pump(); };
+
+// ---------- вкладки и панели ----------
+$$('[data-tab]').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab; $$('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
+  $$('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== tab); br.hidden = true; V.style.cursor = tab === 'cutout' ? 'none' : '';
+});
+$$('[data-tool]').forEach(b => b.onclick = () => { tool = b.dataset.tool; $$('[data-tool]').forEach(x => x.classList.toggle('on', x === b)); });
+$('#sws').innerHTML = COLORS.map((c, i) => `<button data-i="${i}" class="${c ? '' : 'checker'}" style="${c ? 'background:' + c : ''}" aria-label="${c || 'Прозрачный'}"></button>`).join('');
+const mark = () => $$('#sws button').forEach(b => b.classList.toggle('on', bg.type === 'color' ? COLORS[b.dataset.i] === bg.v : bg.type === 'none' && !COLORS[b.dataset.i]));
+$('#sws').onclick = e => { const b = e.target.closest('button'); if (!b) return; const c = COLORS[b.dataset.i]; bg = c ? { type: 'color', v: c } : { type: 'none' }; mark(); paintFrame(); };
+$('#custom').oninput = e => { bg = { type: 'color', v: e.target.value }; mark(); paintFrame(); };
+$('#blurbg').onclick = () => { bg = { type: 'blur' }; mark(); paintFrame(); };
+$('#imgbg').onclick = () => $('#bgfile').click();
+$('#bgfile').onchange = async e => { const f = e.target.files[0]; if (f){ bg = { type: 'image', img: await createImageBitmap(f) }; mark(); paintFrame(); } e.target.value = ''; };
+$('#shOn').onchange = e => { fx.on = e.target.checked; render(); };
+$('#shB').oninput = e => { fx.blur = +e.target.value; render(); };
+$('#shO').oninput = e => { fx.op = +e.target.value; render(); };
+[['aB', 'b'], ['aC', 'c'], ['aS', 's']].forEach(([id, k]) => $('#' + id).oninput = e => { adj[k] = +e.target.value; render(); });
+$('#aR').onclick = () => { adj = { b: 100, c: 100, s: 100 }; ['aB', 'aC', 'aS'].forEach(id => $('#' + id).value = 100); render(); };
+$('#zoom').onclick = () => { zoom = !zoom; $('#zoom').classList.toggle('on', zoom); fit(); };
+addEventListener('resize', fit);
+mark(); V.style.cursor = 'none'; applyLang();
+
+// ---------- кисть: стереть / вернуть (с «магическим» режимом по цвету) ----------
+const editing = () => tab === 'cutout' && !cmp && cur && cur.ready;
+const P = e => { const r = V.getBoundingClientRect(), k = cur.cc.width / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, k, px: (e.clientX - r.left) / r.width }; };
+function snap(){ const s = mk(cur.cc.width, cur.cc.height); s.getContext('2d').drawImage(cur.cc, 0, 0); cur.undo.push(s); if (cur.undo.length > 10) cur.undo.shift(); cur.redo = []; buttons(); }
+function step(from, to){
+  if (!from.length) return; const s = mk(cur.cc.width, cur.cc.height); s.getContext('2d').drawImage(cur.cc, 0, 0); to.push(s);
+  const p = from.pop(); cur.cx.clearRect(0, 0, p.width, p.height); cur.cx.drawImage(p, 0, 0); buttons(); render();
+}
+$('#undo').onclick = () => cur && step(cur.undo, cur.redo);
+$('#redo').onclick = () => cur && step(cur.redo, cur.undo);
+addEventListener('keydown', e => { if (!(e.ctrlKey || e.metaKey) || $('#app').hidden) return; const k = e.key.toLowerCase();
+  if (k === 'z'){ e.preventDefault(); e.shiftKey ? $('#redo').click() : $('#undo').click(); } else if (k === 'y'){ e.preventDefault(); $('#redo').click(); } });
+function stroke(a, b){
+  const r = $('#size').value / 2 * a.k, tol = $('#magic').checked ? 90 : 1e9, W = cur.cc.width, H = cur.cc.height;
+  const bx = Math.max(0, Math.floor(Math.min(a.x, b.x) - r)), by = Math.max(0, Math.floor(Math.min(a.y, b.y) - r));
+  const w = Math.min(W, Math.ceil(Math.max(a.x, b.x) + r)) - bx, h = Math.min(H, Math.ceil(Math.max(a.y, b.y) + r)) - by; if (w <= 0 || h <= 0) return;
+  const cd = cur.cx.getImageData(bx, by, w, h), od = cur.ox.getImageData(bx, by, w, h), c = cd.data, o = od.data;
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const X = bx + x + .5, Y = by + y + .5, t = Math.max(0, Math.min(1, ((X - a.x) * dx + (Y - a.y) * dy) / l2)), ex = X - a.x - t * dx, ey = Y - a.y - t * dy;
+    if (ex * ex + ey * ey > r * r) continue;
+    const i = (y * w + x) * 4;
+    if (Math.abs(o[i] - seed[0]) + Math.abs(o[i + 1] - seed[1]) + Math.abs(o[i + 2] - seed[2]) > tol) continue;
+    if (tool === 'erase') c[i + 3] = 0; else { c[i] = o[i]; c[i + 1] = o[i + 1]; c[i + 2] = o[i + 2]; c[i + 3] = o[i + 3]; }
+  }
+  cur.cx.putImageData(cd, bx, by); req();
+}
+V.onpointerdown = e => {
+  if (!cur || !cur.ready) return;
+  if (cmp){ V.setPointerCapture(e.pointerId); drag = true; split = P(e).px; render(); return; }
+  if (!editing()) return;
+  V.setPointerCapture(e.pointerId); snap(); last = P(e);
+  const o = cur.ox.getImageData(Math.min(cur.oc.width - 1, Math.max(0, last.x | 0)), Math.min(cur.oc.height - 1, Math.max(0, last.y | 0)), 1, 1).data; seed = [o[0], o[1], o[2]];
+  stroke(last, last);
+};
+V.onpointermove = e => {
+  if (editing()){ br.hidden = false; br.style.left = e.clientX + 'px'; br.style.top = e.clientY + 'px'; br.style.width = br.style.height = $('#size').value + 'px'; }
+  if (drag){ split = Math.min(1, Math.max(0, P(e).px)); render(); }
+  else if (last){ const p = P(e); stroke(last, p); last = p; }
+};
+V.onpointerleave = () => br.hidden = true;
+addEventListener('pointerup', () => { last = null; drag = false; });
+
+// ---------- скачивание ----------
+$('#dl').onclick = e => { e.stopPropagation(); if (!cur) return; const W = cur.cc.width, H = cur.cc.height, k = Math.min(1, 500 / Math.max(W, H));
+  $('#mP').textContent = Math.round(W * k) + '×' + Math.round(H * k); $('#mM').textContent = W + '×' + H; $('#menu').hidden = !$('#menu').hidden; };
+addEventListener('click', () => $('#menu').hidden = true);
+$$('#menu button').forEach(b => b.onclick = () => {
+  let W = cur.cc.width, H = cur.cc.height; if (b.dataset.p === '1'){ const k = Math.min(1, 500 / Math.max(W, H)); W = Math.round(W * k); H = Math.round(H * k); }
+  const o = mk(W, H); draw(o.getContext('2d'), W, H, cur);
+  o.toBlob(bl => { const a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = cur.name + '-nobg.png'; a.click(); }, 'image/png');
+});
+
+// ================= Запуск: загрузка всех моделей до начала работы =================
+const VER = '1.7.0', ORT = '1.21.0', JSD = 'https://cdn.jsdelivr.net/npm/';
+let base = '', local = false, res = null, store = null, mapSet = false;
+const nativeFetch = window.fetch.bind(window);
+// В онлайн-режиме сохраняем скачанное в кэш браузера (Cache Storage), чтобы качать один раз
+window.fetch = async (u, o) => {
+  const s = typeof u === 'string' ? u : (u.url || String(u));
+  if (!store || local || !s.startsWith(base)) return nativeFetch(u, o);
+  let hit; try{ hit = await store.match(s); }catch{}
+  if (hit) return hit;
+  const r = await nativeFetch(u, o);
+  if (r.ok) store.put(s, r.clone()).catch(() => {});
+  return r;
+};
+
+async function detectLocal(){
+  if (location.protocol === 'file:') return false;
+  try{
+    const r = await nativeFetch('./models/resources.json', { cache: 'no-cache' });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!j['/models/isnet'] && (await nativeFetch('./vendor/index.mjs', { method: 'HEAD' })).ok;
+  }catch{ return false; }
+}
+function setImportMap(){
+  if (mapSet) return; mapSet = true;
+  const o = local ? new URL('./vendor/', location.href).href : `${JSD}onnxruntime-web@${ORT}/dist/`;
+  const s = document.createElement('script'); s.type = 'importmap';
+  s.textContent = JSON.stringify({ imports: { 'onnxruntime-web': o + 'ort.bundle.min.mjs', 'onnxruntime-web/webgpu': o + 'ort.webgpu.bundle.min.mjs' } });
+  document.head.append(s);
+}
+const mb = n => Math.round(n / 1048576);
+
+async function boot(){
+  const msg = $('#bootMsg'); msg.className = ''; msg.textContent = ''; $('#bootRetry').hidden = true;
+  try{
+    local = await detectLocal();
+    base = local ? new URL('./models/', location.href).href
+                 : `https://staticimgly.com/@imgly/background-removal-data/${VER}/dist/`;
+    $('#bootSrc').textContent = local
+      ? t('Файлы берутся из папки models/ рядом со страницей. Интернет не нужен.')
+      : t('Файлы скачиваются один раз и сохраняются в браузере. Нужен интернет.');
+    if (!local) try{ store = await caches.open('bgremover-' + VER); }catch{}
+    setImportMap();
+
+    msg.textContent = t('Проверяю список файлов…');
+    const r = await fetch(base + 'resources.json');
+    if (!r.ok) throw new Error(t('Не найден список файлов (resources.json).'));
+    res = await r.json();
+    const keys = Object.keys(res).filter(k => res[k].chunks);
+    const groups = [
+      [t('Ядро вычислений'), keys.filter(k => !k.startsWith('/models/'))],
+      [t('Модель «Быстрая»'), ['/models/isnet_quint8']],
+      [t('Модель «Сбалансированная»'), ['/models/isnet_fp16']],
+      [t('Модель «Лучшее качество»'), ['/models/isnet']],
+    ].map(([t, ks]) => ({ t, ks: ks.filter(k => res[k]) })).filter(g => g.ks.length);
+    groups.forEach(g => g.total = g.ks.reduce((s, k) => s + res[k].size, 0));
+    const all = groups.reduce((s, g) => s + g.total, 0);
+    $('#bootRows').innerHTML = groups.map(g =>
+      `<div class="row"><span>${g.t}</span><small>0 / ${mb(g.total)} ${t('МБ')}</small><div class="bar"><i style="width:0"></i></div></div>`).join('');
+    const rows = [...document.querySelectorAll('.row')];
+
+    msg.textContent = t('Загружаю библиотеку…');
+    lib = await import(local ? new URL('./vendor/index.mjs', location.href).href
+                             : `${JSD}@imgly/background-removal@${VER}/dist/index.mjs`)
+      .catch(e => { console.error(e); throw new Error(t('Не удалось загрузить библиотеку. Проверьте интернет или запустите run.py.')); });
+
+    let doneAll = 0;
+    for (let gi = 0; gi < groups.length; gi++){
+      const g = groups[gi], row = rows[gi]; let done = 0;
+      msg.textContent = `${t('Загружаю:')} ${g.t}…`;
+      for (const k of g.ks){
+        await Promise.all(res[k].chunks.map(async c => {
+          const rr = await fetch(base + c.name);
+          if (!rr.ok) throw new Error(`${t('Не удалось получить файл')} ${c.name} (${rr.status}).`);
+          await rr.blob();
+          const n = c.offsets[1] - c.offsets[0]; done += n; doneAll += n;
+          row.querySelector('small').textContent = `${mb(done)} / ${mb(g.total)} ${t('МБ')}`;
+          row.querySelector('i').style.width = (done / g.total * 100) + '%';
+          $('#bootAll').style.width = (doneAll / all * 100) + '%';
+        }));
+      }
+      row.classList.add('ok');
+    }
+    $('#boot').hidden = true; $('#home').hidden = false;
+  }catch(err){
+    console.error(err);
+    msg.className = 'err'; msg.textContent = t('Ошибка: ') + (err.message || err);
+    $('#bootRetry').hidden = false;
+  }
+}
+$('#bootRetry').onclick = boot;
+boot();
+</script>
+</body>
+</html>
